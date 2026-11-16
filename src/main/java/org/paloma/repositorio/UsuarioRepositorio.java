@@ -9,16 +9,31 @@ import org.paloma.modelo.Resena;
 import org.paloma.modelo.Usuario;
 import org.paloma.persistencia.AlmacenArchivos;
 
-/** Repositorio de usuarios, guardados en {@code data/usuarios.dat}. */
+/**
+ * Repositorio para consultar y gestionar usuarios persistidos en
+ * {@code data/usuarios.dat}.
+ */
 public class UsuarioRepositorio implements IRepositorioExtend<Usuario, Integer> {
 
+    /** Nombre del archivo usado para almacenar los usuarios. */
     private static final String ARCHIVO = "usuarios.dat";
 
+    /**
+     * Cuenta los usuarios almacenados.
+     *
+     * @return cantidad de usuarios
+     */
     @Override
     public long count() {
         return registros().size();
     }
 
+    /**
+     * Elimina el usuario indicado y las reseñas que haya escrito.
+     *
+     * @param id identificador del usuario
+     * @throws IllegalArgumentException si el identificador es {@code null}
+     */
     @Override
     public void deleteById(Integer id) {
         validarId(id);
@@ -32,12 +47,22 @@ public class UsuarioRepositorio implements IRepositorioExtend<Usuario, Integer> 
         guardar(usuarios);
     }
 
+    /**
+     * Elimina todos los usuarios y todas las reseñas asociadas.
+     */
     @Override
     public void deleteAll() {
         new ResenaRepositorio().deleteAll();
         guardar(new ArrayList<>());
     }
 
+    /**
+     * Comprueba si existe un usuario con el identificador indicado.
+     *
+     * @param id identificador del usuario
+     * @return {@code true} si existe; {@code false} en caso contrario
+     * @throws IllegalArgumentException si el identificador es {@code null}
+     */
     @Override
     public boolean existsById(Integer id) {
         validarId(id);
@@ -49,11 +74,25 @@ public class UsuarioRepositorio implements IRepositorioExtend<Usuario, Integer> 
         return false;
     }
 
+    /**
+     * Busca un usuario por su identificador.
+     *
+     * @param id identificador del usuario
+     * @return el usuario encontrado o {@code null} si no existe
+     * @throws IllegalArgumentException si el identificador es {@code null}
+     */
     @Override
     public Usuario findById(Integer id) {
         return findByIdOptional(id).orElse(null);
     }
 
+    /**
+     * Busca un usuario por su identificador.
+     *
+     * @param id identificador del usuario
+     * @return un {@link Optional} con el usuario si existe, o vacío si no existe
+     * @throws IllegalArgumentException si el identificador es {@code null}
+     */
     @Override
     public Optional<Usuario> findByIdOptional(Integer id) {
         validarId(id);
@@ -65,6 +104,11 @@ public class UsuarioRepositorio implements IRepositorioExtend<Usuario, Integer> 
         return Optional.empty();
     }
 
+    /**
+     * Obtiene todos los usuarios almacenados como una lista.
+     *
+     * @return lista de usuarios
+     */
     @Override
     public List<Usuario> findAllToList() {
         List<Usuario> resultado = new ArrayList<>();
@@ -74,11 +118,27 @@ public class UsuarioRepositorio implements IRepositorioExtend<Usuario, Integer> 
         return resultado;
     }
 
+    /**
+     * Obtiene todos los usuarios almacenados.
+     *
+     * @return iterable con todos los usuarios
+     */
     @Override
     public Iterable<Usuario> findAll() {
         return findAllToList();
     }
 
+    /**
+     * Guarda un usuario nuevo o actualiza uno existente.
+     *
+     * @param <S> tipo concreto de usuario
+     * @param entity usuario que se desea guardar
+     * @return la misma entidad guardada, con su identificador y fecha de
+     *         inscripción asignados cuando corresponda
+     * @throws IllegalArgumentException si la entidad no es válida, el email ya
+     *                                  está registrado o se intenta actualizar
+     *                                  un usuario inexistente
+     */
     @Override
     public <S extends Usuario> S save(S entity) {
         if (entity == null) {
@@ -120,7 +180,13 @@ public class UsuarioRepositorio implements IRepositorioExtend<Usuario, Integer> 
         return entity;
     }
 
-    /** Devuelve el usuario con ese email o {@link Optional#empty()} si no existe. */
+    /**
+     * Busca un usuario por su email, sin distinguir mayúsculas y minúsculas.
+     *
+     * @param email email que se desea buscar
+     * @return un {@link Optional} con el usuario si existe, o vacío si no existe
+     * @throws IllegalArgumentException si el email es {@code null}
+     */
     public Optional<Usuario> findByEmail(String email) {
         if (email == null) {
             throw new IllegalArgumentException("El email no puede ser nulo");
@@ -133,7 +199,13 @@ public class UsuarioRepositorio implements IRepositorioExtend<Usuario, Integer> 
         return Optional.empty();
     }
 
-    /** Devuelve los usuarios inscritos en la fecha indicada o posteriormente. */
+    /**
+     * Busca los usuarios inscritos en la fecha indicada o posteriormente.
+     *
+     * @param fecha fecha mínima de inscripción
+     * @return lista de usuarios que cumplen el criterio
+     * @throws IllegalArgumentException si la fecha es {@code null}
+     */
     public List<Usuario> findByInscritoDesde(LocalDate fecha) {
         if (fecha == null) {
             throw new IllegalArgumentException("La fecha no puede ser nula");
@@ -147,6 +219,12 @@ public class UsuarioRepositorio implements IRepositorioExtend<Usuario, Integer> 
         return resultado;
     }
 
+    /**
+     * Busca un usuario sin cargar sus reseñas asociadas.
+     *
+     * @param id identificador del usuario
+     * @return usuario encontrado o {@code null} si no existe
+     */
     Usuario findSimpleById(int id) {
         for (UsuarioDato usuario : registros()) {
             if (usuario.id() == id) {
@@ -157,6 +235,12 @@ public class UsuarioRepositorio implements IRepositorioExtend<Usuario, Integer> 
         return null;
     }
 
+    /**
+     * Convierte los datos almacenados en un usuario con sus reseñas.
+     *
+     * @param dato datos persistidos del usuario
+     * @return usuario reconstruido
+     */
     private Usuario mapear(UsuarioDato dato) {
         Usuario usuario = new Usuario(dato.id(), dato.nombre(), dato.email(), dato.fechaInscripcion());
         for (Resena resena : new ResenaRepositorio().findByUsuario(dato.id())) {
@@ -165,14 +249,30 @@ public class UsuarioRepositorio implements IRepositorioExtend<Usuario, Integer> 
         return usuario;
     }
 
+    /**
+     * Lee del almacenamiento los datos de los usuarios.
+     *
+     * @return lista de datos de usuarios almacenados
+     */
     private List<UsuarioDato> registros() {
         return AlmacenArchivos.leerLista(ARCHIVO, UsuarioDato.class);
     }
 
+    /**
+     * Persiste los datos de los usuarios en el archivo configurado.
+     *
+     * @param usuarios datos de usuarios que se van a guardar
+     */
     private void guardar(List<UsuarioDato> usuarios) {
         AlmacenArchivos.guardarLista(ARCHIVO, usuarios);
     }
 
+    /**
+     * Calcula el siguiente identificador disponible.
+     *
+     * @param usuarios usuarios cuyos identificadores se deben considerar
+     * @return identificador mayor existente más uno
+     */
     private int siguienteId(List<UsuarioDato> usuarios) {
         int mayorId = 0;
         for (UsuarioDato usuario : usuarios) {
@@ -183,6 +283,13 @@ public class UsuarioRepositorio implements IRepositorioExtend<Usuario, Integer> 
         return mayorId + 1;
     }
 
+    /**
+     * Sustituye los datos de un usuario por los nuevos datos, o los añade si
+     * todavía no estaban presentes.
+     *
+     * @param usuarios lista de datos que se actualizará
+     * @param nuevo datos del usuario que se va a insertar o reemplazar
+     */
     private void reemplazar(List<UsuarioDato> usuarios, UsuarioDato nuevo) {
         for (int i = usuarios.size() - 1; i >= 0; i--) {
             if (usuarios.get(i).id() == nuevo.id()) {
@@ -192,12 +299,26 @@ public class UsuarioRepositorio implements IRepositorioExtend<Usuario, Integer> 
         usuarios.add(nuevo);
     }
 
+    /**
+     * Comprueba que un identificador no sea nulo.
+     *
+     * @param id identificador que se va a validar
+     * @throws IllegalArgumentException si el identificador es {@code null}
+     */
     private void validarId(Integer id) {
         if (id == null) {
             throw new IllegalArgumentException("El id no puede ser nulo");
         }
     }
 
+    /**
+     * Representación serializable de un usuario y sus datos persistidos.
+     *
+     * @param id identificador del usuario
+     * @param nombre nombre del usuario
+     * @param email email del usuario
+     * @param fechaInscripcion fecha de inscripción
+     */
     private record UsuarioDato(int id, String nombre, String email, LocalDate fechaInscripcion)
             implements java.io.Serializable {
     }
